@@ -662,7 +662,7 @@ function emitLegacyWarning(): void {
   if (hasLegacySessions()) {
     console.warn(
       "[Gyoshu] Legacy sessions found at ~/.gyoshu/sessions/\n" +
-        "         Run /gyoshu-migrate to move them to project-local storage."
+        "         Run /gyoshu migrate to move them to notebooks/."
     );
   }
 }
