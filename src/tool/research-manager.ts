@@ -686,6 +686,10 @@ export default tool({
       .enum(["active", "completed", "archived"])
       .optional()
       .describe("Research status for update action"),
+    query: tool.schema
+      .string()
+      .optional()
+      .describe("Search query for action=search"),
     data: tool.schema
       .any()
       .optional()
@@ -1279,9 +1283,9 @@ export default tool({
       // =========================================================================
 
       case "search": {
-        const query = args.data?.query as string;
+        const query = args.query || (args.data?.query as string);
         if (!query || typeof query !== "string" || query.trim().length === 0) {
-          throw new Error("query is required for search action (non-empty string in data.query)");
+          throw new Error("query is required for search action");
         }
 
         const researchDir = getResearchDir();
