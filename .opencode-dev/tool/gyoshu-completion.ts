@@ -7,7 +7,7 @@
 import { tool } from "@opencode-ai/plugin";
 import { durableAtomicWrite, fileExists, readFile } from "../lib/atomic-write";
 import { getLegacyManifestPath } from "../lib/paths";
-import { generateReport, gatherReportContext, ReportContext } from "../lib/report-markdown";
+import { gatherReportContext, ReportContext } from "../lib/report-markdown";
 import { exportToPdf } from "../lib/pdf-export";
 
 interface KeyResult {
@@ -156,47 +156,15 @@ function mapToGoalStatus(status: CompletionStatus): string {
   }
 }
 
-interface ReportResult {
-  generated: boolean;
-  reportPath?: string;
-  error?: string;
-}
-
-interface PdfResult {
-  exported: boolean;
-  pdfPath?: string;
-  converter?: string;
-  error?: string;
-}
-
 interface AIReportResult {
   ready: boolean;
   context?: ReportContext;
   error?: string;
 }
 
-async function tryGenerateReport(
-  reportTitle: string | undefined
-): Promise<ReportResult> {
-  if (!reportTitle) {
-    return { generated: false, error: "No reportTitle provided for report generation" };
-  }
-
-  try {
-    const { reportPath } = await generateReport(reportTitle);
-    return { generated: true, reportPath };
-  } catch (err) {
-    return { generated: false, error: (err as Error).message };
-  }
-}
-
-async function tryExportPdf(reportPath: string | undefined): Promise<PdfResult> {
+async function tryExportPdf(reportPath: string | undefined): Promise<{ exported: boolean; pdfPath?: string; error?: string }> {
   if (!reportPath) {
     return { exported: false, error: "No report path available for PDF export" };
-  }
-
-  if (!reportPath.endsWith(".md")) {
-    return { exported: false, error: "Report path must end with .md extension" };
   }
 
   try {
@@ -204,16 +172,9 @@ async function tryExportPdf(reportPath: string | undefined): Promise<PdfResult> 
     const result = await exportToPdf(reportPath, pdfPath);
     
     if (result.success) {
-      return { 
-        exported: true, 
-        pdfPath: result.pdfPath,
-        converter: result.converter,
-      };
+      return { exported: true, pdfPath: result.pdfPath };
     } else {
-      return { 
-        exported: false, 
-        error: result.error,
-      };
+      return { exported: false, error: result.error };
     }
   } catch (err) {
     return { exported: false, error: (err as Error).message };
@@ -282,14 +243,10 @@ export default tool({
       .string()
       .optional()
       .describe("Report title for report generation (e.g., 'my-research' for notebooks/my-research.ipynb)"),
-    useAIReport: tool.schema
-      .boolean()
-      .optional()
-      .describe("When true, gather context for AI-generated narrative report instead of rule-based report. Caller should invoke jogyo-paper-writer agent with the returned context."),
   },
 
   async execute(args) {
-    const { researchSessionID, status, summary, evidence, nextSteps, blockers, exportPdf, reportTitle, useAIReport } = args;
+    const { researchSessionID, status, summary, evidence, nextSteps, blockers, exportPdf, reportTitle } = args;
 
     validateSessionId(researchSessionID);
 
@@ -339,20 +296,11 @@ export default tool({
       await durableAtomicWrite(manifestPath, JSON.stringify(updatedManifest, null, 2));
     }
 
-    let reportResult: ReportResult | undefined;
     let pdfResult: PdfResult | undefined;
     let aiReportResult: AIReportResult | undefined;
     
     if (valid && status === "SUCCESS") {
-      if (useAIReport) {
-        aiReportResult = await tryGatherAIContext(reportTitle);
-      } else {
-        reportResult = await tryGenerateReport(reportTitle);
-        
-        if (exportPdf && reportResult.generated && reportResult.reportPath) {
-          pdfResult = await tryExportPdf(reportResult.reportPath);
-        }
-      }
+      aiReportResult = await tryGatherAIContext(reportTitle);
     }
 
     const response: Record<string, unknown> = {
@@ -376,19 +324,15 @@ export default tool({
       },
     };
 
-    if (reportResult) {
-      response.report = reportResult;
+    if (aiReportResult) {
+      response.aiReport = aiReportResult;
+      if (aiReportResult.ready) {
+        response.message = `Completion signal recorded: ${status}. IMPORTANT: Now invoke jogyo-paper-writer agent with the context below to generate the narrative report.`;
+      }
     }
 
     if (pdfResult) {
       response.pdf = pdfResult;
-    }
-
-    if (aiReportResult) {
-      response.aiReport = aiReportResult;
-      if (aiReportResult.ready) {
-        response.message = `Completion signal recorded: ${status}. AI report context gathered - invoke jogyo-paper-writer agent with the context.`;
-      }
     }
 
     return JSON.stringify(response, null, 2);

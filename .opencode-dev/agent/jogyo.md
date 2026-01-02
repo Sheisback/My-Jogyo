@@ -227,22 +227,28 @@ Typical research execution flow:
    )
    ```
 
-2. **Complete Task** - Generate both notebook AND report:
+2. **Signal Completion** - Get context for report generation:
    ```
    gyoshu_completion(
      researchSessionID: "...",
      status: "SUCCESS",
      summary: "Customer churn analysis complete",
      reportTitle: "customer-churn-analysis",
-     evidence: { executedCellIds: [...], keyResults: [...] },
-     exportPdf: true
+     evidence: { executedCellIds: [...], keyResults: [...] }
    )
+   ```
+   This returns `aiReport.context` with structured data for the paper writer.
+
+3. **Generate Report** - MUST invoke paper-writer with the context:
+   ```
+   @jogyo-paper-writer
+   Write a research report for customer-churn-analysis using this context:
+   {paste aiReport.context from step 2}
    ```
 
 This produces:
 - `notebooks/customer-churn-analysis.ipynb` (created during execution)
-- `reports/customer-churn-analysis/README.md` (generated on completion)
-- `reports/customer-churn-analysis/report.pdf` (if exportPdf: true)
+- `reports/customer-churn-analysis/README.md` (AI-generated narrative report)
 
 ## Example Output
 
@@ -308,24 +314,22 @@ gyoshu_completion(
       {"name": "p_value", "value": "0.001", "type": "float"}
     ]
   },
-  exportPdf: true,
   nextSteps: "Consider multivariate analysis to control for confounders"
 )
 ```
 
-This generates:
-- `reports/iris-correlation-analysis/README.md` (markdown report)
-- `reports/iris-correlation-analysis/report.pdf` (PDF export)
+The response includes `aiReport.context` - you MUST then invoke `@jogyo-paper-writer` with this context to generate the report.
 
-### AI-Generated Narrative Reports
+### Report Generation (MANDATORY)
 
-For higher-quality narrative reports (instead of rule-based templated output), use `useAIReport: true`:
+After `gyoshu_completion` returns SUCCESS, you MUST invoke the paper-writer agent to generate the report:
 
+**Step 1: Call gyoshu_completion**
 ```
 gyoshu_completion(
   researchSessionID: "<session-id>",
   status: "SUCCESS",
-  summary: "Confirmed strong positive correlation (r=0.87, p<0.001) between sepal and petal length",
+  summary: "Confirmed strong positive correlation (r=0.87, p<0.001)",
   reportTitle: "iris-correlation-analysis",
   evidence: {
     executedCellIds: ["cell_001", "cell_002", "cell_003"],
@@ -334,22 +338,25 @@ gyoshu_completion(
       {"name": "correlation", "value": "0.87", "type": "float"},
       {"name": "p_value", "value": "0.001", "type": "float"}
     ]
-  },
-  useAIReport: true
+  }
 )
 ```
 
-When `useAIReport: true`:
-1. The tool gathers structured context from the notebook (via `gatherReportContext()`)
-2. Returns the context in `aiReport.context` field
-3. The planner/caller should then invoke `@jogyo-paper-writer` with this context
-4. The paper writer generates a professional narrative report
+**Step 2: Invoke paper-writer with the context**
+The completion tool returns `aiReport.context`. You MUST pass this to the paper-writer:
 
-**AI-generated reports produce:**
+```
+@jogyo-paper-writer
+Generate the research report for iris-correlation-analysis.
+Context: {paste the aiReport.context JSON here}
+```
+
+**The paper-writer produces:**
 - Natural prose instead of bullet lists
 - Integrated metrics and explanations
 - Coherent narrative flow from objective to conclusion
 - Professional scientific writing style
+- Output: `reports/{reportTitle}/README.md`
 
 ### Validation Rules
 
