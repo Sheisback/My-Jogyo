@@ -151,77 +151,48 @@ function matchesQuery(feedback: RetrospectiveFeedback, query: string): boolean {
 }
 
 export default tool({
-  name: "retrospective-store",
   description:
     "Manage retrospective feedback for cross-session learning. " +
     "Actions: append (add feedback), list (get recent), query (search), top (ranked), stats (counts).",
 
-  parameters: {
-    type: "object",
-    properties: {
-      action: {
-        type: "string",
-        enum: ["append", "list", "query", "top", "stats"],
-        description:
-          "append: Add new feedback, " +
-          "list: Get recent feedback, " +
-          "query: Search feedback by text, " +
-          "top: Get top-ranked feedback, " +
-          "stats: Get storage statistics",
-      },
-      feedback: {
-        type: "object",
-        description: "Feedback record for append action",
-        properties: {
-          task_context: { type: "string", description: "Brief task description" },
-          observation: { type: "string", description: "What happened" },
-          learning: { type: "string", description: "Key takeaway" },
-          recommendation: { type: "string", description: "How to improve" },
-          impact_score: { type: "number", description: "Importance 0-1" },
-          tags: { type: "array", items: { type: "string" }, description: "Categories" },
-          source_session_id: { type: "string", description: "Session ID" },
-          run_id: { type: "string", description: "Cycle/run ID" },
-        },
-        required: ["task_context", "observation", "learning", "recommendation"],
-      },
-      query: {
-        type: "string",
-        description: "Search text for query action",
-      },
-      limit: {
-        type: "number",
-        description: "Maximum results to return (default: 10)",
-      },
-      tags: {
-        type: "array",
-        items: { type: "string" },
-        description: "Filter by tags",
-      },
-      since: {
-        type: "string",
-        description: "ISO timestamp to filter from",
-      },
-    },
-    required: ["action"],
+  args: {
+    action: tool.schema
+      .enum(["append", "list", "query", "top", "stats"])
+      .describe(
+        "append: Add new feedback, " +
+        "list: Get recent feedback, " +
+        "query: Search feedback by text, " +
+        "top: Get top-ranked feedback, " +
+        "stats: Get storage statistics"
+      ),
+    feedback: tool.schema
+      .any()
+      .optional()
+      .describe(
+        "Feedback record for append action. Object with: " +
+        "task_context (required), observation (required), learning (required), " +
+        "recommendation (required), impact_score (0-1), tags (array), " +
+        "source_session_id, run_id"
+      ),
+    query: tool.schema
+      .string()
+      .optional()
+      .describe("Search text for query action"),
+    limit: tool.schema
+      .number()
+      .optional()
+      .describe("Maximum results to return (default: 10)"),
+    tags: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe("Filter by tags"),
+    since: tool.schema
+      .string()
+      .optional()
+      .describe("ISO timestamp to filter from"),
   },
 
-  async execute(args: {
-    action: "append" | "list" | "query" | "top" | "stats";
-    feedback?: {
-      task_context: string;
-      observation: string;
-      learning: string;
-      recommendation: string;
-      impact_score?: number;
-      tags?: string[];
-      source_session_id?: string;
-      run_id?: string;
-    };
-    query?: string;
-    limit?: number;
-    tags?: string[];
-    since?: string;
-  }) {
+  async execute(args) {
     const { action, limit = 10 } = args;
 
     try {

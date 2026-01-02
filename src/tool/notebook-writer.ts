@@ -140,84 +140,64 @@ async function saveNotebookWithCellIds(
 }
 
 export default tool({
-  name: "notebook-writer",
   description:
     "Write and manage Jupyter notebooks for Gyoshu research. " +
     "Actions: ensure_notebook, append_cell, upsert_report_cell, finalize. " +
     "Uses atomic writes and nbformat 4.5 with cell IDs.",
 
-  parameters: {
-    type: "object",
-    properties: {
-      action: {
-        type: "string",
-        enum: ["ensure_notebook", "append_cell", "upsert_report_cell", "finalize"],
-        description:
-          "ensure_notebook: create with report cell, " +
-          "append_cell: add code/markdown, " +
-          "upsert_report_cell: update report, " +
-          "finalize: mark complete",
-      },
-      reportTitle: {
-        type: "string",
-        description: "Title for the report/notebook (e.g., 'wine-quality-analysis'). Used to generate notebook path as notebooks/{reportTitle}.ipynb",
-      },
-      notebookPath: {
-        type: "string",
-        description: "Absolute path to notebook file (.ipynb) - legacy mode, prefer reportTitle",
-      },
-      researchSessionID: {
-        type: "string",
-        description: "Session ID (required when creating new notebook with legacy path)",
-      },
-      cellType: {
-        type: "string",
-        enum: ["code", "markdown"],
-        description: "Cell type for append_cell",
-      },
-      source: {
-        type: "array",
-        items: { type: "string" },
-        description: "Cell source lines for append_cell",
-      },
-      outputs: {
-        type: "array",
-        items: { type: "object" },
-        description: "Cell outputs (stream/execute_result/display_data/error)",
-      },
-      executionCount: {
-        type: "number",
-        description: "Execution count for code cells",
-      },
-      tags: {
-        type: "array",
-        items: { type: "string" },
-        description:
-          "Cell tags for categorization (Papermill-style). " +
-          "Standard Gyoshu tags: gyoshu-objective, gyoshu-hypothesis, gyoshu-config, " +
-          "gyoshu-data, gyoshu-analysis, gyoshu-finding, gyoshu-conclusion, " +
-          "gyoshu-run-start, gyoshu-run-end, gyoshu-report",
-      },
-      reportContent: {
-        type: "string",
-        description: "Markdown content for upsert_report_cell",
-      },
-    },
-    required: ["action"],
+  args: {
+    action: tool.schema
+      .enum(["ensure_notebook", "append_cell", "upsert_report_cell", "finalize"])
+      .describe(
+        "ensure_notebook: create with report cell, " +
+        "append_cell: add code/markdown, " +
+        "upsert_report_cell: update report, " +
+        "finalize: mark complete"
+      ),
+    reportTitle: tool.schema
+      .string()
+      .optional()
+      .describe("Title for the report/notebook (e.g., 'wine-quality-analysis'). Used to generate notebook path as notebooks/{reportTitle}.ipynb"),
+    notebookPath: tool.schema
+      .string()
+      .optional()
+      .describe("Absolute path to notebook file (.ipynb) - legacy mode, prefer reportTitle"),
+    researchSessionID: tool.schema
+      .string()
+      .optional()
+      .describe("Session ID (required when creating new notebook with legacy path)"),
+    cellType: tool.schema
+      .enum(["code", "markdown"])
+      .optional()
+      .describe("Cell type for append_cell"),
+    source: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe("Cell source lines for append_cell"),
+    outputs: tool.schema
+      .array(tool.schema.any())
+      .optional()
+      .describe("Cell outputs (stream/execute_result/display_data/error)"),
+    executionCount: tool.schema
+      .number()
+      .optional()
+      .describe("Execution count for code cells"),
+    tags: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe(
+        "Cell tags for categorization (Papermill-style). " +
+        "Standard Gyoshu tags: gyoshu-objective, gyoshu-hypothesis, gyoshu-config, " +
+        "gyoshu-data, gyoshu-analysis, gyoshu-finding, gyoshu-conclusion, " +
+        "gyoshu-run-start, gyoshu-run-end, gyoshu-report"
+      ),
+    reportContent: tool.schema
+      .string()
+      .optional()
+      .describe("Markdown content for upsert_report_cell"),
   },
 
-  async execute(args: {
-    action: "ensure_notebook" | "append_cell" | "upsert_report_cell" | "finalize";
-    reportTitle?: string;
-    notebookPath?: string;
-    researchSessionID?: string;
-    cellType?: "code" | "markdown";
-    source?: string[];
-    outputs?: CellOutput[];
-    executionCount?: number;
-    tags?: string[];
-    reportContent?: string;
-  }) {
+  async execute(args) {
     const { action, reportTitle } = args;
 
     // Validate reportTitle to prevent directory traversal attacks

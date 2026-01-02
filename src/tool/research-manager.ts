@@ -649,77 +649,68 @@ async function writeNotebook(notebookPath: string, notebook: Notebook): Promise<
 // =============================================================================
 
 export default tool({
-  name: "research-manager",
   description:
     "Manage Gyoshu research projects with notebook-centric storage. " +
     "Research metadata is stored in notebook YAML frontmatter (source of truth). " +
     "Notebooks organized by workspace with mirrored outputs directory. " +
     "Legacy research.json format supported for migration only.",
 
-  parameters: {
-    type: "object",
-    properties: {
-      action: {
-        type: "string",
-        enum: ["create", "get", "list", "update", "delete", "addRun", "getRun", "updateRun", "search", "workspace-list", "workspace-create", "workspace-sync"],
-        description: "Operation to perform on research or runs",
-      },
-      researchId: {
-        type: "string",
-        description: "Unique research identifier (legacy mode, required for run operations)",
-      },
-      runId: {
-        type: "string",
-        description: "Unique run identifier (required for run-specific actions)",
-      },
-      reportTitle: {
-        type: "string",
-        description: "Notebook basename without .ipynb (e.g., 'churn-prediction'). Used for notebook-based operations.",
-      },
-      title: {
-        type: "string",
-        description: "Human-readable title for the research (optional, defaults to reportTitle)",
-      },
-      goal: {
-        type: "string",
-        description: "Research goal or objective (optional, added as markdown cell)",
-      },
-      tags: {
-        type: "array",
-        items: { type: "string" },
-        description: "Tags for categorization (e.g., ['ml', 'classification'])",
-      },
-      status: {
-        type: "string",
-        enum: ["active", "completed", "archived"],
-        description: "Research status for update action",
-      },
-      query: {
-        type: "string",
-        description: "Search query for action=search",
-      },
-      name: {
-        type: "string",
-        description: "Workspace name for workspace-create action",
-      },
-      description: {
-        type: "string",
-        description: "Workspace description for workspace-create action",
-      },
-      workspace: {
-        type: "string",
-        description: "Workspace name for filtering or workspace-sync action",
-      },
-      slug: {
-        type: "string",
-        description: "Research slug within workspace",
-      },
-      data: {
-        type: "object",
-        description: "Data for create/update operations. For research: title, status, tags, summaries. For runs: goal, mode, keyResults, artifacts, sessionId, executionLog, status, endedAt.",
-      },
-    },
-    required: ["action"],
+  args: {
+    action: tool.schema
+      .enum(["create", "get", "list", "update", "delete", "addRun", "getRun", "updateRun", "search", "workspace-list", "workspace-create", "workspace-sync"])
+      .describe("Operation to perform on research or runs"),
+    researchId: tool.schema
+      .string()
+      .optional()
+      .describe("Unique research identifier (legacy mode, required for run operations)"),
+    runId: tool.schema
+      .string()
+      .optional()
+      .describe("Unique run identifier (required for run-specific actions)"),
+    reportTitle: tool.schema
+      .string()
+      .optional()
+      .describe("Notebook basename without .ipynb (e.g., 'churn-prediction'). Used for notebook-based operations."),
+    title: tool.schema
+      .string()
+      .optional()
+      .describe("Human-readable title for the research (optional, defaults to reportTitle)"),
+    goal: tool.schema
+      .string()
+      .optional()
+      .describe("Research goal or objective (optional, added as markdown cell)"),
+    tags: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe("Tags for categorization (e.g., ['ml', 'classification'])"),
+    status: tool.schema
+      .enum(["active", "completed", "archived"])
+      .optional()
+      .describe("Research status for update action"),
+    query: tool.schema
+      .string()
+      .optional()
+      .describe("Search query for action=search"),
+    name: tool.schema
+      .string()
+      .optional()
+      .describe("Workspace name for workspace-create action"),
+    description: tool.schema
+      .string()
+      .optional()
+      .describe("Workspace description for workspace-create action"),
+    workspace: tool.schema
+      .string()
+      .optional()
+      .describe("Workspace name for filtering or workspace-sync action"),
+    slug: tool.schema
+      .string()
+      .optional()
+      .describe("Research slug within workspace"),
+    data: tool.schema
+      .any()
+      .optional()
+      .describe("Data for create/update operations. For research: title, status, tags, summaries. For runs: goal, mode, keyResults, artifacts, sessionId, executionLog, status, endedAt."),
   },
 
   async execute(args) {

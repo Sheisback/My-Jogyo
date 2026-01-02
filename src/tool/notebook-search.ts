@@ -628,7 +628,6 @@ async function getAllResearchIds(): Promise<string[]> {
 // =============================================================================
 
 export default tool({
-  name: "notebook-search",
   description:
     "Search within Jupyter notebooks for Gyoshu research. " +
     "Searches code cells, markdown cells, and optionally cell outputs. " +
@@ -636,62 +635,46 @@ export default tool({
     "Looks in detected notebook locations first, then falls back to legacy paths. " +
     "Returns ranked results with contextual snippets.",
 
-  parameters: {
-    type: "object",
-    properties: {
-      query: {
-        type: "string",
-        description: "Search query text (case-insensitive)",
-      },
-      researchId: {
-        type: "string",
-        description:
-          "Optional: Scope search to a specific research project. " +
-          "If not provided, searches across all research projects.",
-      },
-      tags: {
-        type: "array",
-        items: { type: "string" },
-        description:
-          "Optional: Filter by tags (all must match). " +
-          "Only notebooks containing all specified tags will be searched.",
-      },
-      status: {
-        type: "string",
-        enum: ["active", "completed", "archived"],
-        description: "Optional: Filter by research status from notebook frontmatter.",
-      },
-      includeArchived: {
-        type: "boolean",
-        description:
-          "Whether to include archived research in search. Default: false",
-        default: false,
-      },
-      includeOutputs: {
-        type: "boolean",
-        description:
-          "Whether to search code cell outputs (stdout, display_data, errors). " +
-          "Default: true",
-        default: true,
-      },
-      limit: {
-        type: "number",
-        description: "Maximum number of results to return. Default: 50",
-        default: 50,
-      },
-    },
-    required: ["query"],
+  args: {
+    query: tool.schema
+      .string()
+      .describe("Search query text (case-insensitive)"),
+    researchId: tool.schema
+      .string()
+      .optional()
+      .describe(
+        "Optional: Scope search to a specific research project. " +
+        "If not provided, searches across all research projects."
+      ),
+    tags: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe(
+        "Optional: Filter by tags (all must match). " +
+        "Only notebooks containing all specified tags will be searched."
+      ),
+    status: tool.schema
+      .enum(["active", "completed", "archived"])
+      .optional()
+      .describe("Optional: Filter by research status from notebook frontmatter."),
+    includeArchived: tool.schema
+      .boolean()
+      .optional()
+      .describe("Whether to include archived research in search. Default: false"),
+    includeOutputs: tool.schema
+      .boolean()
+      .optional()
+      .describe(
+        "Whether to search code cell outputs (stdout, display_data, errors). " +
+        "Default: true"
+      ),
+    limit: tool.schema
+      .number()
+      .optional()
+      .describe("Maximum number of results to return. Default: 50"),
   },
 
-  async execute(args: {
-    query: string;
-    researchId?: string;
-    tags?: string[];
-    status?: ResearchStatus;
-    includeArchived?: boolean;
-    includeOutputs?: boolean;
-    limit?: number;
-  }) {
+  async execute(args) {
     const { 
       query, 
       researchId, 
