@@ -20,13 +20,20 @@ Workspaces are no longer virtual tags; they are **physical directories** within 
   - `{workspace}/`: Topic-based folders.
   - `_quick/`: Default folder for ad-hoc analysis.
   - `README.md`: Auto-generated index of all workspaces and recent activity.
-- `outputs/`: Mirrors the `notebooks/` structure for large artifacts.
-  - `{workspace}/{slug}/figures/`: Saved plots and visualizations.
-  - `{workspace}/{slug}/models/`: Saved model weights and binaries.
-  - `{workspace}/{slug}/exports/`: Data exports (CSV, Parquet, etc.).
+- `reports/`: Mirrors the `notebooks/` structure for research outputs.
+  - `{reportTitle}/figures/`: Saved plots and visualizations.
+  - `{reportTitle}/models/`: Saved model weights and binaries.
+  - `{reportTitle}/exports/`: Data exports (CSV, Parquet, etc.).
+  - `{reportTitle}/report.md`: Generated research report.
 
-### Ephemeral Data (Gitignored)
-- `gyoshu/runtime/`: Contains active session locks, Unix sockets for the Python bridge, and temporary runtime metadata. This directory is strictly for ephemeral state and is never committed.
+### Ephemeral Data (OS Temp Directories)
+Runtime data is stored in OS-appropriate temp directories, NOT in the project:
+- Linux (with XDG): `$XDG_RUNTIME_DIR/gyoshu/` (e.g., `/run/user/{uid}/gyoshu/`)
+- Linux (fallback): `~/.cache/gyoshu/runtime/`
+- macOS: `~/Library/Caches/gyoshu/runtime/`
+- Override: Set `GYOSHU_RUNTIME_DIR` environment variable
+
+This directory contains active session locks, Unix sockets for the Python bridge, and temporary runtime metadata. It is strictly for ephemeral state and never touches your project files.
 
 ## 3. Metadata Schema (YAML Frontmatter)
 

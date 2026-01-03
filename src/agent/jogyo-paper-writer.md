@@ -158,7 +158,7 @@ features.
 1. **Read** the context JSON provided
 2. **Analyze** the relationships between objectives, hypotheses, and findings
 3. **Synthesize** a coherent narrative that tells the research story
-4. **Write** the markdown report to `reports/{reportTitle}/README.md`
+4. **Write** the markdown report to `reports/{reportTitle}/report.md`
 5. **Confirm** the report was written successfully
 
 ## Error Handling

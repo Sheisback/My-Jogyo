@@ -27,6 +27,11 @@ Think of it like a research lab:
 
 ## ✨ Features
 
+<!-- TODO: Add demo GIF showing /gyoshu-auto workflow -->
+<p align="center">
+  <em>🎬 Demo coming soon! Try the <a href="docs/user-guide.md">Quick Tutorial</a> to see Gyoshu in action.</em>
+</p>
+
 - 🔬 **Hypothesis-Driven Research** — Structure your work with `[OBJECTIVE]`, `[HYPOTHESIS]`, `[FINDING]` markers
 - 🐍 **Persistent Python REPL** — Variables survive across sessions, just like a real Jupyter kernel
 - 📓 **Auto-Generated Notebooks** — Every experiment is captured as a reproducible `.ipynb`
@@ -157,7 +162,7 @@ your-project/
 │   └── customer-churn.ipynb
 ├── reports/                      # 📝 Generated reports
 │   └── wine-quality/
-│       ├── README.md             # AI-written narrative report
+│       ├── report.md             # AI-written narrative report
 │       ├── figures/              # Saved plots
 │       └── models/               # Saved models
 ├── data/                         # 📊 Your datasets
@@ -165,6 +170,24 @@ your-project/
 ```
 
 **Runtime files** (sockets, locks) go to OS temp directories—not your project! 🧹
+
+### What Gyoshu Creates
+
+When you run research, Gyoshu creates these artifacts in your project:
+
+```
+your-project/
+├── notebooks/
+│   └── your-research.ipynb    ← Research notebook (source of truth)
+├── reports/
+│   └── your-research/
+│       ├── figures/           ← Saved plots (.png, .svg)
+│       ├── models/            ← Trained models (.pkl, .joblib)
+│       └── report.md          ← Generated research report
+└── (your existing files untouched!)
+```
+
+> **Note:** Gyoshu never modifies your `.venv/`, `data/`, or other existing project files.
 
 ---
 
@@ -185,17 +208,20 @@ The TA uses structured markers to organize research output:
 
 ## 🐍 Python Environment
 
-Gyoshu auto-detects your Python environment:
+Gyoshu uses your project's `.venv/` virtual environment:
 
 | Priority | Type | How It's Detected |
 |----------|------|-------------------|
 | 1️⃣ | Custom | `GYOSHU_PYTHON_PATH` env var |
-| 2️⃣ | venv | `.venv/` directory |
-| 3️⃣ | uv | `uv.lock` file |
-| 4️⃣ | poetry | `poetry.lock` file |
-| 5️⃣ | conda | `environment.yml` file |
+| 2️⃣ | venv | `.venv/bin/python` exists |
 
-No environment? No problem! The installer creates one for you.
+**Quick setup:**
+```bash
+python3 -m venv .venv
+.venv/bin/pip install pandas numpy scikit-learn matplotlib seaborn
+```
+
+> **Coming soon:** uv, poetry, and conda environment detection are planned for future releases.
 
 ---
 
@@ -203,7 +229,42 @@ No environment? No problem! The installer creates one for you.
 
 - **OpenCode** v0.1.0+
 - **Python** 3.10+ 
-- **Optional**: `psutil` (for memory tracking), `uv`/`poetry`/`conda` (for faster env creation)
+- **Optional**: `psutil` (for memory tracking)
+
+### Supported Platforms
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| **Linux** | ✅ Primary | Tested on Ubuntu 22.04+ |
+| **macOS** | ✅ Supported | Intel & Apple Silicon |
+| **Windows** | ⚠️ WSL2 Only | Native Windows not supported |
+
+---
+
+## 🔄 Updating
+
+### Option 1: Re-run the installer
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Yeachan-Heo/My-Jogyo/main/install.sh | bash
+```
+
+### Option 2: Pull and re-install (if you cloned)
+
+```bash
+cd My-Jogyo
+git pull
+./install.sh
+```
+
+### Verify your update
+
+```bash
+opencode
+/gyoshu doctor
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for what's new in each release.
 
 ---
 
@@ -273,6 +334,19 @@ curl -fsSL https://raw.githubusercontent.com/Yeachan-Heo/oh-my-opencode/main/ins
    → Ships the feature that addresses the insight
 
 **Data informs decisions. Code ships solutions.** 🚀
+
+---
+
+## 🔧 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **"No .venv found"** | Create a virtual environment: `python3 -m venv .venv && .venv/bin/pip install pandas numpy` |
+| **"Bridge failed to start"** | Check Python version (need 3.10+): `python3 --version`. Check socket path permissions. |
+| **"Session locked"** | Use `/gyoshu unlock <sessionId>` after verifying no process is running |
+| **OpenCode not in PATH** | Install from [opencode-ai/opencode](https://github.com/opencode-ai/opencode) |
+
+Still stuck? Run `/gyoshu doctor` to diagnose issues.
 
 ---
 

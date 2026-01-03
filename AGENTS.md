@@ -718,30 +718,21 @@ Reports are stored in a mirrored structure:
 
 ## Python Environment Management
 
-Gyoshu automatically detects and uses Python virtual environments to ensure research reproducibility. It supports multiple environment managers with the following priority:
+Gyoshu uses Python virtual environments for research reproducibility.
 
-### Detection Priority (for existing environments)
+### Detection Priority
 
-| Priority | Type | Detection Method | Command Used |
-|----------|------|------------------|--------------|
-| 1 | Custom | `GYOSHU_PYTHON_PATH` env var | Direct path |
-| 2 | venv | `./venv/bin/python` exists | Direct path |
-| 3 | venv | `./.venv/bin/python` exists | Direct path |
-| 4 | Gyoshu venv | `./gyoshu/venv/bin/python` exists | Direct path |
-| 5 | uv | `uv.lock` or `[tool.uv]` in pyproject.toml | `uv run python` |
-| 6 | poetry | `poetry.lock` or `[tool.poetry]` in pyproject.toml | `poetry run python` |
-| 7 | conda | `environment.yml` or `environment.yaml` exists | `conda run python` |
+| Priority | Type | Detection Method |
+|----------|------|------------------|
+| 1 | Custom | `GYOSHU_PYTHON_PATH` env var |
+| 2 | venv | `.venv/bin/python` exists |
 
-### Creation Priority (when no environment exists)
+### Quick Setup
 
-When no existing environment is detected, Gyoshu creates one using the best available tool:
-
-| Priority | Tool | Creates At | Packages Installed |
-|----------|------|------------|-------------------|
-| 1 | uv | `./gyoshu/venv/` | pandas, numpy, scikit-learn, matplotlib, seaborn |
-| 2 | poetry | `./gyoshu/` (poetry env) | Same as above |
-| 3 | conda | `gyoshu-{project}` env | Same as above |
-| 4 | venv | `./gyoshu/venv/` | Same as above |
+```bash
+python3 -m venv .venv
+.venv/bin/pip install pandas numpy scikit-learn matplotlib seaborn
+```
 
 ### Environment Override
 
@@ -750,5 +741,7 @@ Set `GYOSHU_PYTHON_PATH` to force a specific Python interpreter:
 ```bash
 export GYOSHU_PYTHON_PATH=/path/to/custom/python
 ```
+
+> **Coming soon:** uv, poetry, and conda environment detection are planned for future releases.
 
 > **Important**: Gyoshu never uses system Python directly. It always ensures an isolated virtual environment for reproducible research.

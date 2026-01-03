@@ -169,12 +169,12 @@ project/
 │   └── sales-forecasting.ipynb
 ├── reports/
 │   ├── customer-churn-analysis/
-│   │   ├── README.md              # Markdown report
+│   │   ├── report.md              # Markdown report
 │   │   └── figures/               # Visualizations
 │   ├── wine-quality-prediction/
-│   │   └── README.md
+│   │   └── report.md
 │   └── sales-forecasting/
-│       └── README.md
+│       └── report.md
 └── .venv/                         # Python environment (required)
 ```
 
@@ -182,7 +182,7 @@ project/
 
 Each @jogyo task MUST produce:
 1. **1 notebook**: `notebooks/{reportTitle}.ipynb`
-2. **1 report**: `reports/{reportTitle}/README.md`
+2. **1 report**: `reports/{reportTitle}/report.md`
 
 ### Discovery Before New Research
 

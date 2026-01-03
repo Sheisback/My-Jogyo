@@ -353,7 +353,7 @@ reports/{reportTitle}/
 | Models | `{name}_model.pkl` | `rf_model.pkl` |
 | Metrics | `{name}_metrics.json` | `training_metrics.json` |
 | Plots | `{name}.png` | `correlation_matrix.png` |
-| Reports | `{name}_report.md` | `eda_report.md` |
+| Stage Summaries | `{name}_summary.md` | `eda_summary.md` |
 | Logs | `{name}.log` | `training.log` |
 
 ### Referencing Artifacts Between Stages

@@ -18,7 +18,7 @@ Parse and route based on the first token of arguments:
 The following first tokens are reserved subcommands (case-sensitive exact match):
 
 ```
-plan, continue, repl, list, search, report, replay, unlock, migrate, abort, help
+plan, continue, repl, list, search, report, replay, unlock, migrate, abort, help, doctor
 ```
 
 ### Routing Logic
@@ -33,6 +33,9 @@ plan, continue, repl, list, search, report, replay, unlock, migrate, abort, help
    
    ELSE IF first_token == "help":
       → Help Workflow
+   
+   ELSE IF first_token == "doctor":
+      → Doctor Workflow
    
    ELSE IF first_token == "plan":
       → Plan Workflow (remaining args = goal)
@@ -92,6 +95,7 @@ Usage:
   /gyoshu replay <sessionId>  Replay for reproducibility
   /gyoshu unlock <sessionId>  Unlock stuck session
   /gyoshu abort [sessionId]   Abort current research
+  /gyoshu doctor             Check system health and diagnose issues
 
 For autonomous research (hands-off execution):
   /gyoshu-auto <goal>         Bounded autonomous execution
@@ -101,6 +105,132 @@ Examples:
   /gyoshu continue iris-clustering
   /gyoshu list --status active
   /gyoshu search "machine learning"
+```
+
+---
+
+## Doctor Workflow
+
+**Trigger:** `/gyoshu doctor`
+
+Verify system readiness and diagnose common issues.
+
+### Step 1: Run Diagnostic Checks
+
+Execute the following checks in order:
+
+| # | Check | Method | Pass Criteria |
+|---|-------|--------|---------------|
+| 1 | OpenCode context | `process.env.OPENCODE === "1"` | Must be running inside OpenCode |
+| 2 | Python version | Spawn `python3 --version` | Must be 3.10+ |
+| 3 | Virtual environment | Check `.venv/bin/python` exists | File must exist |
+| 4 | Bridge spawn | Start bridge, run `print("ok")` | Must return "ok" within 5s |
+| 5 | Notebooks directory | Create test file in `notebooks/` | Directory must be writable |
+| 6 | Core packages | `python3 -c "import pandas; import numpy"` | No ImportError |
+
+### Step 2: Display Results
+
+Format results as a diagnostic table:
+
+```
+🩺 Gyoshu Doctor — System Health Check
+
+| Check | Status | Details |
+|-------|--------|---------|
+| OpenCode | ✅ Pass | Running in OpenCode context |
+| Python | ✅ Pass | Python 3.11.5 |
+| .venv | ✅ Pass | .venv/bin/python exists |
+| Bridge | ✅ Pass | Bridge responded in 0.3s |
+| notebooks/ | ✅ Pass | Directory writable |
+| pandas | ✅ Pass | v2.0.3 |
+| numpy | ✅ Pass | v1.24.0 |
+| matplotlib | ⚠️ Optional | Not installed (visualization disabled) |
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ All required checks passed! Ready for research.
+
+💡 Tip: Run /gyoshu help to see available commands.
+```
+
+### Step 3: Handle Failures
+
+If any required check fails, provide actionable fix:
+
+**OpenCode context failed:**
+```
+❌ OpenCode | Not running in OpenCode context
+
+Fix: Start OpenCode first, then run /gyoshu doctor
+     $ opencode
+```
+
+**Python version failed:**
+```
+❌ Python | Python 3.8.10 (need 3.10+)
+
+Fix: Install Python 3.10 or newer
+     Ubuntu: sudo apt install python3.10
+     macOS: brew install python@3.10
+```
+
+**.venv not found:**
+```
+❌ .venv | Virtual environment not found
+
+Fix: Create a virtual environment in your project:
+     $ python3 -m venv .venv
+     $ .venv/bin/pip install pandas numpy scikit-learn matplotlib
+```
+
+**Bridge spawn failed:**
+```
+❌ Bridge | Failed to start (timeout after 5s)
+
+Fix: Check Python installation and permissions
+     1. Verify: python3 --version
+     2. Check socket path:
+        - Linux (with XDG): /run/user/$(id -u)/gyoshu/
+        - Linux (fallback): ~/.cache/gyoshu/runtime/
+        - macOS: ~/Library/Caches/gyoshu/runtime/
+        - Override: Set GYOSHU_RUNTIME_DIR environment variable
+     3. Try: /gyoshu unlock <sessionId> if session is stuck
+```
+
+**notebooks/ not writable:**
+```
+❌ notebooks/ | Directory not writable
+
+Fix: Check directory permissions:
+     $ mkdir -p notebooks && chmod 755 notebooks
+```
+
+**Core packages missing:**
+```
+⚠️ pandas | Not installed
+
+Fix: Install required packages:
+     $ .venv/bin/pip install pandas numpy
+```
+
+### Step 4: Summary
+
+End with overall status:
+
+**All passed:**
+```
+✅ All required checks passed! Ready for research.
+
+Get started:
+  /gyoshu <your research goal>
+  /gyoshu-auto <goal>  (hands-off mode)
+```
+
+**Some failed:**
+```
+❌ N check(s) failed. Fix the issues above and run /gyoshu doctor again.
+
+Need help? See troubleshooting: https://github.com/Yeachan-Heo/My-Jogyo#troubleshooting
 ```
 
 ---
@@ -119,24 +249,58 @@ research-manager(action: "list")
 
 ### Step 2: Display Status
 
-**If researches found:**
+Route to the appropriate scenario based on research state:
+
+**Scenario 1: Has Active Research** (status: "active" with IN_PROGRESS run)
+
+When there is research with an active run in progress, display it prominently:
 
 ```
 🔬 Gyoshu Research
 
-📊 Current Project Status:
-| # | Research | Title | Status | Runs | Last Updated |
-|---|----------|-------|--------|------|--------------|
-| 1 | iris-clustering | Iris Species Analysis | active | 2 | 2024-01-15 |
-| 2 | churn-analysis | Customer Churn | completed | 5 | 2024-01-10 |
+🎯 Active Research: [title]
+   Goal: [goal from most recent run]
+   Status: In progress ([runId])
+   Last updated: [relative time, e.g., "2 hours ago"]
 
-💡 Suggestions:
-- Continue #1: /gyoshu continue iris-clustering
-- Start new: /gyoshu <your research goal>
-- Search: /gyoshu search <query>
+💡 Continue: /gyoshu continue [reportTitle]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 Other Research Projects:
+| # | Research | Status | Last Updated |
+|---|----------|--------|--------------|
+| 1 | [title] | completed | 2 days ago |
+| 2 | [title] | completed | 1 week ago |
+
+Other options:
+- /gyoshu list                List all research
+- /gyoshu report [id]         Generate report
+- /gyoshu <new goal>          Start fresh
 ```
 
-**If no researches found:**
+**Scenario 2: Has Completed Researches Only** (no active runs)
+
+When all researches are completed/archived (no IN_PROGRESS runs):
+
+```
+🔬 Gyoshu Research
+
+📊 Recent Completed:
+| # | Research | Status | Last Updated |
+|---|----------|--------|--------------|
+| 1 | wine-quality | completed | 2 days ago |
+| 2 | iris-clustering | completed | 1 week ago |
+
+💡 What's next?
+- Continue existing: /gyoshu continue wine-quality
+- Start fresh: /gyoshu <your new goal>
+- View reports: /gyoshu report wine-quality
+
+🩺 System check: /gyoshu doctor
+```
+
+**Scenario 3: No Researches Found**
 
 ```
 🔬 Gyoshu Research
@@ -145,17 +309,56 @@ No research projects found in this project.
 
 💡 Get started:
 - Start research: /gyoshu <your research goal>
-- Example: /gyoshu analyze the wine quality dataset
+- Autonomous mode: /gyoshu-auto <goal>
 
-For autonomous research:
-- /gyoshu-auto <goal>  (hands-off bounded execution)
+📚 New to Gyoshu? Try the 60-second tutorial:
+   /gyoshu analyze wine quality factors in data/wine_quality.csv
+
+🩺 Having issues? Run diagnostics:
+   /gyoshu doctor
+
+📖 Full guide: docs/user-guide.md
 ```
 
-### Step 3: Highlight Active Research
+### Step 3: Scenario Detection Logic
 
-If there's an active research (status: "active" with IN_PROGRESS run):
-- Show it prominently at the top
-- Suggest continuing it first
+Determine the appropriate scenario using this logic:
+
+```
+1. Get all researches: research-manager(action: "list")
+
+2. IF researches.length == 0:
+   → Scenario 3: No Researches Found
+
+3. ELSE:
+   a. Find researches with status: "active"
+   b. For each active research, check if any run has status: "IN_PROGRESS"
+   
+   c. IF any research has IN_PROGRESS run:
+      → Scenario 1: Has Active Research
+      → Highlight the most recently updated active research at top
+      → List others in the table below
+   
+   d. ELSE (all completed or archived):
+      → Scenario 2: Has Completed Researches Only
+      → Sort by last updated date (most recent first)
+      → Suggest continuing the most recent one
+
+4. Format relative time for "Last Updated":
+   - < 1 hour: "X minutes ago"
+   - < 24 hours: "X hours ago"  
+   - < 7 days: "X days ago"
+   - < 30 days: "X weeks ago"
+   - else: "X months ago" or date
+```
+
+### Step 4: Highlight Active Research
+
+For Scenario 1 (Active Research), emphasize the active research:
+- Place active research at the top with goal and status
+- Use the `💡 Continue:` line as the primary call-to-action
+- Make the continue command copy-pasteable
+- Show other researches in a secondary table below the separator
 
 ---
 

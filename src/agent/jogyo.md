@@ -324,7 +324,7 @@ S04_merge_chunks    (1 min) - Combine processed chunks
 
 **Every jogyo task MUST produce:**
 1. **1 Jupyter notebook**: `notebooks/{reportTitle}.ipynb` - Contains all code and outputs
-2. **1 Markdown report**: `reports/{reportTitle}/README.md` - Human-readable summary with assets
+2. **1 Markdown report**: `reports/{reportTitle}/report.md` - Human-readable summary with assets
 
 ### Directory Structure
 
@@ -334,7 +334,7 @@ project/
 │   └── {reportTitle}.ipynb       # Your analysis notebook
 ├── reports/
 │   └── {reportTitle}/
-│       ├── README.md             # Markdown report with findings
+│       ├── report.md             # Markdown report with findings
 │       └── figures/              # Exported visualizations
 └── .venv/                        # Python environment (must exist)
 ```
@@ -342,7 +342,7 @@ project/
 ### Example
 For a task "analyze customer churn":
 - Notebook: `notebooks/customer-churn-analysis.ipynb`
-- Report: `reports/customer-churn-analysis/README.md`
+- Report: `reports/customer-churn-analysis/report.md`
 
 ### Using python-repl with Auto-Capture
 
@@ -483,7 +483,7 @@ Typical research execution flow:
 
 This produces:
 - `notebooks/customer-churn-analysis.ipynb` (created during execution)
-- `reports/customer-churn-analysis/README.md` (AI-generated narrative report)
+- `reports/customer-churn-analysis/report.md` (AI-generated narrative report)
 
 ## Example Output
 
@@ -591,7 +591,7 @@ Context: {paste the aiReport.context JSON here}
 - Integrated metrics and explanations
 - Coherent narrative flow from objective to conclusion
 - Professional scientific writing style
-- Output: `reports/{reportTitle}/README.md`
+- Output: `reports/{reportTitle}/report.md`
 
 ### Validation Rules
 
