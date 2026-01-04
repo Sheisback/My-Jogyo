@@ -159,7 +159,7 @@ export const MARKER_TAXONOMY: Record<string, MarkerDefinition> = {
   STAT: {
     name: 'STAT',
     category: 'CALCULATIONS',
-    description: 'Statistical measures (mean, std, p-value)',
+    description: 'Statistical measures. Subtypes: ci (confidence interval), effect_size, p_value, estimate',
   },
   CORR: {
     name: 'CORR',
@@ -220,7 +220,7 @@ export const MARKER_TAXONOMY: Record<string, MarkerDefinition> = {
   CHECK: {
     name: 'CHECK',
     category: 'WORKFLOW',
-    description: 'Validation checks and assertions',
+    description: 'Assumption verification checks. Subtypes: normality, homogeneity, independence',
   },
   INFO: {
     name: 'INFO',
@@ -262,7 +262,27 @@ export const MARKER_TAXONOMY: Record<string, MarkerDefinition> = {
   DECISION: {
     name: 'DECISION',
     category: 'SCIENTIFIC',
-    description: 'Research decisions and their rationale',
+    description: 'Research decisions with rationale, including test selection justification',
+  },
+  SO_WHAT: {
+    name: 'SO_WHAT',
+    category: 'SCIENTIFIC',
+    description: 'Practical significance explanation - translates statistical findings to real-world impact',
+  },
+  INDEPENDENT_CHECK: {
+    name: 'INDEPENDENT_CHECK',
+    category: 'SCIENTIFIC',
+    description: 'Robustness verification using alternative method or sensitivity analysis',
+  },
+  CHALLENGE_RESPONSE: {
+    name: 'CHALLENGE_RESPONSE',
+    category: 'SCIENTIFIC',
+    description: 'Response to adversarial challenge from Baksa. Format: [CHALLENGE_RESPONSE:N] response text',
+  },
+  VERIFICATION_CODE: {
+    name: 'VERIFICATION_CODE',
+    category: 'SCIENTIFIC',
+    description: 'Reproducible verification code that proves a claim',
   },
 };
 

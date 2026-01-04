@@ -25,6 +25,136 @@ import { Notebook, NotebookCell } from "./cell-identity";
 import { extractFrontmatter, GyoshuFrontmatter } from "./notebook-frontmatter";
 import { getNotebookPath, getReportDir, getReportReadmePath, getReportsRootDir } from "./paths";
 
+// =============================================================================
+// FINDING VERIFICATION - Separate verified vs unverified findings
+// =============================================================================
+
+/**
+ * Number of lines to look back for statistical evidence before a finding.
+ */
+const STAT_LOOKBACK_LINES = 10;
+
+/**
+ * Findings separated by verification status.
+ */
+export interface SeparatedFindings {
+  /** Findings with both [STAT:ci] and [STAT:effect_size] nearby */
+  verified: ParsedMarker[];
+  /** Findings with partial evidence (one of CI or effect_size) */
+  partial: ParsedMarker[];
+  /** Findings without statistical evidence */
+  exploratory: ParsedMarker[];
+}
+
+/**
+ * Check if a STAT marker with specific subtype exists within N lines before a given line.
+ *
+ * @param markers - All parsed markers
+ * @param targetLine - Line number of the finding
+ * @param statSubtype - The STAT subtype to look for (e.g., 'ci', 'effect_size')
+ * @param lookback - Number of lines to look back (default: 10)
+ * @returns true if the required STAT marker exists within the lookback window
+ */
+function hasStatMarkerBefore(
+  markers: ParsedMarker[],
+  targetLine: number,
+  statSubtype: string,
+  lookback: number = STAT_LOOKBACK_LINES
+): boolean {
+  const minLine = Math.max(1, targetLine - lookback);
+
+  return markers.some(
+    (m) =>
+      m.type === "STAT" &&
+      m.subtype === statSubtype &&
+      m.lineNumber >= minLine &&
+      m.lineNumber < targetLine
+  );
+}
+
+/**
+ * Separate findings into verified, partial, and exploratory categories.
+ *
+ * The "Finding Gating Rule" categorizes findings based on statistical evidence:
+ * - Verified: Has both [STAT:ci] and [STAT:effect_size] within 10 lines before
+ * - Partial: Has one of [STAT:ci] or [STAT:effect_size]
+ * - Exploratory: Missing statistical evidence
+ *
+ * @param markers - Array of all parsed markers from notebook output
+ * @returns SeparatedFindings with verified, partial, and exploratory arrays
+ *
+ * @example
+ * ```typescript
+ * const markers = extractMarkersFromNotebook(notebook);
+ * const { verified, partial, exploratory } = separateFindings(markers);
+ * console.log(`Verified: ${verified.length}, Exploratory: ${exploratory.length}`);
+ * ```
+ */
+export function separateFindings(markers: ParsedMarker[]): SeparatedFindings {
+  const findings = getMarkersByType(markers, "FINDING");
+  const verified: ParsedMarker[] = [];
+  const partial: ParsedMarker[] = [];
+  const exploratory: ParsedMarker[] = [];
+
+  for (const finding of findings) {
+    const hasCI = hasStatMarkerBefore(markers, finding.lineNumber, "ci");
+    const hasEffectSize = hasStatMarkerBefore(markers, finding.lineNumber, "effect_size");
+
+    if (hasCI && hasEffectSize) {
+      verified.push(finding);
+    } else if (hasCI || hasEffectSize) {
+      partial.push(finding);
+    } else {
+      exploratory.push(finding);
+    }
+  }
+
+  return { verified, partial, exploratory };
+}
+
+/**
+ * Required sections for IMRAD report structure validation.
+ */
+export interface RequiredSection {
+  /** Marker type to check for */
+  marker: string;
+  /** Report section name */
+  section: string;
+  /** Description of what's missing */
+  description: string;
+}
+
+/**
+ * IMRAD sections and their corresponding markers.
+ */
+const REQUIRED_IMRAD_SECTIONS: RequiredSection[] = [
+  { marker: "OBJECTIVE", section: "Introduction", description: "No research objective defined" },
+  { marker: "EXPERIMENT", section: "Methods", description: "No experimental methodology described" },
+  { marker: "FINDING", section: "Results", description: "No findings reported" },
+  { marker: "CONCLUSION", section: "Conclusion", description: "No conclusions drawn" },
+];
+
+/**
+ * Validate that required IMRAD sections are present.
+ *
+ * @param markers - Array of all parsed markers
+ * @returns Array of missing section info (empty if all sections present)
+ */
+export function validateIMRADSections(
+  markers: ParsedMarker[]
+): RequiredSection[] {
+  const missing: RequiredSection[] = [];
+
+  for (const req of REQUIRED_IMRAD_SECTIONS) {
+    const found = getMarkersByType(markers, req.marker);
+    if (found.length === 0) {
+      missing.push(req);
+    }
+  }
+
+  return missing;
+}
+
 export interface ArtifactEntry {
   filename: string;
   relativePath: string;
@@ -85,6 +215,7 @@ export interface ReportModel {
   methodology?: string;
   metrics: MetricEntry[];
   findings: string[];
+  separatedFindings?: SeparatedFindings;
   limitations: string[];
   nextSteps: string[];
   conclusion?: string;
@@ -92,6 +223,7 @@ export interface ReportModel {
   frontmatter?: GyoshuFrontmatter;
   generatedAt: string;
   executionHistory?: ExecutionHistoryEntry[];
+  missingSections?: RequiredSection[];
 }
 
 const SENTINEL_BEGIN = (name: string) => `<!-- GYOSHU:REPORT:${name}:BEGIN -->`;
@@ -197,7 +329,6 @@ export function buildReportModel(
         .join(" ")
     : "Research";
 
-  // Extract STAGE markers for execution history
   const stageMarkers = getMarkersByType(markers, "STAGE");
   const executionHistory: ExecutionHistoryEntry[] = [];
 
@@ -211,6 +342,9 @@ export function buildReportModel(
     }
   }
 
+  const separated = separateFindings(markers);
+  const missingSections = validateIMRADSections(markers);
+
   return {
     title,
     objective: objectives[0]?.content,
@@ -222,6 +356,7 @@ export function buildReportModel(
       subtype: m.subtype,
     })),
     findings: findings.map((m) => m.content),
+    separatedFindings: separated,
     limitations: limitations.map((m) => m.content),
     nextSteps: nextSteps.map((m) => m.content),
     conclusion: conclusions[conclusions.length - 1]?.content,
@@ -229,6 +364,7 @@ export function buildReportModel(
     frontmatter,
     generatedAt: new Date().toISOString(),
     executionHistory: executionHistory.length > 0 ? executionHistory : undefined,
+    missingSections: missingSections.length > 0 ? missingSections : undefined,
   };
 }
 
@@ -283,7 +419,51 @@ export function renderReportMarkdown(model: ReportModel): string {
     lines.push("");
   }
 
-  if (model.findings.length > 0) {
+  if (model.separatedFindings) {
+    const { verified, partial, exploratory } = model.separatedFindings;
+
+    if (verified.length > 0) {
+      lines.push(SENTINEL_BEGIN("VERIFIED_FINDINGS"));
+      lines.push("## Key Findings (Verified)");
+      lines.push("");
+      lines.push("*These findings have full statistical evidence (CI + effect size).*");
+      lines.push("");
+      for (let i = 0; i < verified.length; i++) {
+        lines.push(`${i + 1}. ${verified[i].content}`);
+      }
+      lines.push("");
+      lines.push(SENTINEL_END("VERIFIED_FINDINGS"));
+      lines.push("");
+    }
+
+    if (partial.length > 0) {
+      lines.push(SENTINEL_BEGIN("PARTIAL_FINDINGS"));
+      lines.push("## Findings (Partial Evidence)");
+      lines.push("");
+      lines.push("*These findings have partial statistical evidence.*");
+      lines.push("");
+      for (let i = 0; i < partial.length; i++) {
+        lines.push(`${i + 1}. ${partial[i].content}`);
+      }
+      lines.push("");
+      lines.push(SENTINEL_END("PARTIAL_FINDINGS"));
+      lines.push("");
+    }
+
+    if (exploratory.length > 0) {
+      lines.push(SENTINEL_BEGIN("EXPLORATORY"));
+      lines.push("## Exploratory Observations");
+      lines.push("");
+      lines.push("*These observations lack full statistical evidence and should be verified.*");
+      lines.push("");
+      for (let i = 0; i < exploratory.length; i++) {
+        lines.push(`${i + 1}. ${exploratory[i].content}`);
+      }
+      lines.push("");
+      lines.push(SENTINEL_END("EXPLORATORY"));
+      lines.push("");
+    }
+  } else if (model.findings.length > 0) {
     lines.push(SENTINEL_BEGIN("FINDINGS"));
     lines.push("## Key Findings");
     lines.push("");
@@ -358,6 +538,20 @@ export function renderReportMarkdown(model: ReportModel): string {
     }
 
     lines.push(SENTINEL_END("EXECUTION_HISTORY"));
+    lines.push("");
+  }
+
+  if (model.missingSections && model.missingSections.length > 0) {
+    lines.push(SENTINEL_BEGIN("MISSING_SECTIONS"));
+    lines.push("## Missing IMRAD Sections");
+    lines.push("");
+    lines.push("*The following required report sections are missing:*");
+    lines.push("");
+    for (const section of model.missingSections) {
+      lines.push(`- **${section.section}**: [SECTION MISSING: No [${section.marker}] marker found]`);
+    }
+    lines.push("");
+    lines.push(SENTINEL_END("MISSING_SECTIONS"));
     lines.push("");
   }
 

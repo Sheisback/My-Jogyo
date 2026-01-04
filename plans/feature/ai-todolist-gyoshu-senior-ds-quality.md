@@ -106,18 +106,18 @@
 ## Phase 2: Quality Gate System (1-2 days)
 
 ### 2.1 Create Quality Gates Library
-- [ ] 6. Create `src/lib/quality-gates.ts`
-   - [ ] 6.1 Define interfaces: QualityViolation, QualityGateResult
-   - [ ] 6.2 Implement validateFindings():
+- [x] 6. Create `src/lib/quality-gates.ts`
+   - [x] 6.1 Define interfaces: QualityViolation, QualityGateResult
+   - [x] 6.2 Implement validateFindings():
       - Scan for [FINDING] markers
       - Check for nearby [STAT:ci] (within 5 lines)
       - Check for nearby [STAT:effect_size] (within 5 lines)
       - Return violations for missing evidence
-   - [ ] 6.3 Implement validateMLPipeline():
+   - [x] 6.3 Implement validateMLPipeline():
       - Check for baseline metrics
       - Check for CV metrics
       - Check for interpretation markers
-   - [ ] 6.4 Implement runQualityGates():
+   - [x] 6.4 Implement runQualityGates():
       - Read notebook
       - Extract stdout from code cells
       - Run both validators
@@ -127,47 +127,47 @@
    **File**: `src/lib/quality-gates.ts`
 
 ### 2.2 Create Quality Gates Tests
-- [ ] 7. Create `src/lib/quality-gates.test.ts`
-   - [ ] 7.1 Test: Finding with all stats → passes
-   - [ ] 7.2 Test: Finding without CI → fails
-   - [ ] 7.3 Test: Finding without effect size → fails
-   - [ ] 7.4 Test: ML metrics without baseline → fails
-   - [ ] 7.5 Test: ML metrics without CV → fails
-   - [ ] 7.6 Test: Score calculation accuracy
+- [x] 7. Create `src/lib/quality-gates.test.ts`
+   - [x] 7.1 Test: Finding with all stats → passes
+   - [x] 7.2 Test: Finding without CI → fails
+   - [x] 7.3 Test: Finding without effect size → fails
+   - [x] 7.4 Test: ML metrics without baseline → fails
+   - [x] 7.5 Test: ML metrics without CV → fails
+   - [x] 7.6 Test: Score calculation accuracy
    **Parallelizable**: YES (with Task 8)
    **Effort**: 1 hour
    **File**: `src/lib/quality-gates.test.ts`
 
 ### 2.3 Update Marker Parser
-- [ ] 8. Extend `src/lib/marker-parser.ts` for new markers
-   - [ ] 8.1 Add STAT marker type with subtypes (ci, effect_size, p_value, estimate)
-   - [ ] 8.2 Add DECISION, CHECK, SO_WHAT, LIMITATION, INDEPENDENT_CHECK types
-   - [ ] 8.3 Add ML marker type with subtypes (baseline, cv_result, tuning, etc.)
-   - [ ] 8.4 Add getMarkersByType() helper function
-   - [ ] 8.5 Update tests for new markers
+- [x] 8. Extend `src/lib/marker-parser.ts` for new markers
+   - [x] 8.1 Add STAT marker type with subtypes (ci, effect_size, p_value, estimate)
+   - [x] 8.2 Add DECISION, CHECK, SO_WHAT, LIMITATION, INDEPENDENT_CHECK types
+   - [x] 8.3 Add ML marker type with subtypes (baseline, cv_result, tuning, etc.)
+   - [x] 8.4 Add getMarkersByType() helper function
+   - [x] 8.5 Update tests for new markers
    **Parallelizable**: YES (with Task 7)
    **Effort**: 1 hour
    **File**: `src/lib/marker-parser.ts`
 
 ### 2.4 Integrate into Completion Tool
-- [ ] 9. Update `src/tool/gyoshu-completion.ts`
-   - [ ] 9.1 Import runQualityGates from quality-gates.ts
-   - [ ] 9.2 Add quality gate check before SUCCESS status
-   - [ ] 9.3 Downgrade SUCCESS → PARTIAL if quality gates fail
-   - [ ] 9.4 Add quality_score and violations to result
-   - [ ] 9.5 Add unverified_findings list to evidence
+- [x] 9. Update `src/tool/gyoshu-completion.ts`
+   - [x] 9.1 Import runQualityGates from quality-gates.ts
+   - [x] 9.2 Add quality gate check before SUCCESS status
+   - [x] 9.3 Downgrade SUCCESS → PARTIAL if quality gates fail
+   - [x] 9.4 Add quality_score and violations to result
+   - [x] 9.5 Add unverified_findings list to evidence
    **Parallelizable**: NO (depends on Tasks 6, 8)
    **Effort**: 1 hour
    **File**: `src/tool/gyoshu-completion.ts`
 
 ### 2.5 Update Report Generation
-- [ ] 10. Update `src/lib/report-markdown.ts`
-   - [ ] 10.1 Import quality gates
-   - [ ] 10.2 Add separateFindings(): verified vs unverified
-   - [ ] 10.3 Add "Verified Findings" section to template
-   - [ ] 10.4 Add "Exploratory Observations" section for unverified
-   - [ ] 10.5 Add required sections validation (IMRAD)
-   - [ ] 10.6 Add [SECTION MISSING] placeholders for absent sections
+- [x] 10. Update `src/lib/report-markdown.ts`
+   - [x] 10.1 Import quality gates
+   - [x] 10.2 Add separateFindings(): verified vs unverified
+   - [x] 10.3 Add "Verified Findings" section to template
+   - [x] 10.4 Add "Exploratory Observations" section for unverified
+   - [x] 10.5 Add required sections validation (IMRAD)
+   - [x] 10.6 Add [SECTION MISSING] placeholders for absent sections
    **Parallelizable**: NO (depends on Task 6)
    **Effort**: 1.5 hours
    **File**: `src/lib/report-markdown.ts`

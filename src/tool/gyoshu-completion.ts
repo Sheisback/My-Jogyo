@@ -5,10 +5,12 @@
  */
 
 import { tool } from "@opencode-ai/plugin";
+import * as fs from "fs/promises";
 import { durableAtomicWrite, fileExists, readFile } from "../lib/atomic-write";
-import { getLegacyManifestPath } from "../lib/paths";
+import { getLegacyManifestPath, getNotebookPath } from "../lib/paths";
 import { gatherReportContext, ReportContext } from "../lib/report-markdown";
-import { exportToPdf } from "../lib/pdf-export";
+import { runQualityGates, QualityGateResult } from "../lib/quality-gates";
+import type { Notebook } from "../lib/cell-identity";
 
 interface KeyResult {
   name: string;
@@ -229,25 +231,6 @@ interface AIReportResult {
   error?: string;
 }
 
-async function tryExportPdf(reportPath: string | undefined): Promise<{ exported: boolean; pdfPath?: string; error?: string }> {
-  if (!reportPath) {
-    return { exported: false, error: "No report path available for PDF export" };
-  }
-
-  try {
-    const pdfPath = reportPath.replace(/\.md$/, ".pdf");
-    const result = await exportToPdf(reportPath, pdfPath);
-    
-    if (result.success) {
-      return { exported: true, pdfPath: result.pdfPath };
-    } else {
-      return { exported: false, error: result.error };
-    }
-  } catch (err) {
-    return { exported: false, error: (err as Error).message };
-  }
-}
-
 async function tryGatherAIContext(
   reportTitle: string | undefined
 ): Promise<AIReportResult> {
@@ -341,11 +324,44 @@ export default tool({
     const warnings = [...baseWarnings, ...challengeWarnings];
     const valid = !hasErrors(warnings);
 
+    let qualityGateResult: QualityGateResult | undefined;
+    let adjustedStatus = status;
+
+    if (status === "SUCCESS" && reportTitle) {
+      try {
+        const notebookPath = getNotebookPath(reportTitle);
+        const notebookContent = await fs.readFile(notebookPath, "utf-8");
+        const notebook = JSON.parse(notebookContent) as Notebook;
+
+        const allOutput: string[] = [];
+        for (const cell of notebook.cells) {
+          if (cell.cell_type === "code" && cell.outputs) {
+            for (const output of cell.outputs as Array<Record<string, unknown>>) {
+              if (output.output_type === "stream" && output.name === "stdout") {
+                const text = Array.isArray(output.text)
+                  ? (output.text as string[]).join("")
+                  : String(output.text || "");
+                allOutput.push(text);
+              }
+            }
+          }
+        }
+
+        qualityGateResult = runQualityGates(allOutput.join("\n"));
+
+        if (!qualityGateResult.passed) {
+          adjustedStatus = "PARTIAL";
+        }
+      } catch (e) {
+        console.warn(`Quality gate check failed: ${(e as Error).message}`);
+      }
+    }
+
     const manifest = await readFile<SessionManifest>(manifestPath, true);
 
     const completionRecord: CompletionRecord = {
       timestamp: new Date().toISOString(),
-      status,
+      status: adjustedStatus,
       summary,
     };
 
@@ -364,11 +380,11 @@ export default tool({
     const updatedManifest: SessionManifest = {
       ...manifest,
       updated: new Date().toISOString(),
-      goalStatus: mapToGoalStatus(status),
+      goalStatus: mapToGoalStatus(adjustedStatus),
       completion: completionRecord,
     };
 
-    if (status === "SUCCESS") {
+    if (adjustedStatus === "SUCCESS") {
       updatedManifest.status = "completed";
     }
 
@@ -376,26 +392,26 @@ export default tool({
       await durableAtomicWrite(manifestPath, JSON.stringify(updatedManifest, null, 2));
     }
 
-    let pdfResult: PdfResult | undefined;
     let aiReportResult: AIReportResult | undefined;
     
-    if (valid && status === "SUCCESS") {
+    if (valid && adjustedStatus === "SUCCESS") {
       aiReportResult = await tryGatherAIContext(reportTitle);
     }
 
     const response: Record<string, unknown> = {
       success: valid,
       researchSessionID,
-      status,
+      status: adjustedStatus,
+      originalStatus: status !== adjustedStatus ? status : undefined,
       valid,
       warnings: warnings.length > 0 ? warnings : undefined,
       message: valid
-        ? `Completion signal recorded: ${status}`
+        ? `Completion signal recorded: ${adjustedStatus}`
         : `Completion signal rejected due to validation errors`,
       completion: valid ? completionRecord : undefined,
       manifestUpdated: valid,
       summary: {
-        status,
+        status: adjustedStatus,
         hasEvidence: !!typedEvidence,
         executedCellCount: typedEvidence?.executedCellIds?.length ?? 0,
         keyResultCount: typedEvidence?.keyResults?.length ?? 0,
@@ -412,12 +428,22 @@ export default tool({
     if (aiReportResult) {
       response.aiReport = aiReportResult;
       if (aiReportResult.ready) {
-        response.message = `Completion signal recorded: ${status}. IMPORTANT: Now invoke jogyo-paper-writer agent with the context below to generate the narrative report.`;
+        response.message = `Completion signal recorded: ${adjustedStatus}. IMPORTANT: Now invoke jogyo-paper-writer agent with the context below to generate the narrative report.`;
       }
     }
 
-    if (pdfResult) {
-      response.pdf = pdfResult;
+    if (qualityGateResult) {
+      response.qualityGates = {
+        passed: qualityGateResult.passed,
+        score: qualityGateResult.score,
+        violations: qualityGateResult.violations,
+        findingsValidation: qualityGateResult.findingsValidation,
+        mlValidation: qualityGateResult.mlValidation,
+      };
+
+      if (!qualityGateResult.passed) {
+        response.message = `Completion signal recorded: ${adjustedStatus} (downgraded from SUCCESS due to ${qualityGateResult.violations.length} quality gate violation(s))`;
+      }
     }
 
     return JSON.stringify(response, null, 2);
