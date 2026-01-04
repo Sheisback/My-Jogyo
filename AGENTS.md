@@ -742,6 +742,4 @@ Set `GYOSHU_PYTHON_PATH` to force a specific Python interpreter:
 export GYOSHU_PYTHON_PATH=/path/to/custom/python
 ```
 
-> **Coming soon:** uv, poetry, and conda environment detection are planned for future releases.
-
-> **Important**: Gyoshu never uses system Python directly. It always ensures an isolated virtual environment for reproducible research.
+> **Note:** Gyoshu uses your project's virtual environment. It never modifies system Python.

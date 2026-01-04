@@ -221,7 +221,7 @@ python3 -m venv .venv
 .venv/bin/pip install pandas numpy scikit-learn matplotlib seaborn
 ```
 
-> **Coming soon:** uv, poetry, and conda environment detection are planned for future releases.
+> **Note:** Gyoshu uses your project's virtual environment. It never modifies system Python.
 
 ---
 
@@ -281,47 +281,35 @@ It's a partnership. The Professor has the vision. The TA makes it happen. Togeth
 
 ---
 
-## 🤝 Better Together: Oh-My-OpenCode + My-Jogyo
+## 🤝 Optional Companion: Oh-My-OpenCode
 
-For **data-driven product development**, combine My-Jogyo with [Oh-My-OpenCode](https://github.com/code-yeongyu/oh-my-opencode):
+> **Gyoshu works completely standalone.** It has its own agent stack and requires no other OpenCode extensions (like oh-my-opencode).
 
-| Tool | Focus | Best For |
-|------|-------|----------|
-| **[Oh-My-OpenCode](https://github.com/code-yeongyu/oh-my-opencode)** | 🏗️ Product Development | Building features, writing code, shipping products |
-| **My-Jogyo** | 📊 Data Analysis | Research, experiments, insights, ML models |
+For **data-driven product development workflows**, you can optionally combine Gyoshu with [Oh-My-OpenCode](https://github.com/code-yeongyu/oh-my-opencode):
 
-### The Synergy
+| Tool | Focus | Independent? |
+|------|-------|--------------|
+| **Gyoshu (this project)** | 📊 Research & Analysis | ✅ Fully standalone |
+| **[Oh-My-OpenCode](https://github.com/code-yeongyu/oh-my-opencode)** | 🏗️ Product Development | ✅ Fully standalone |
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                 Data-Driven Product Development             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│   📊 My-Jogyo                    🏗️ Oh-My-OpenCode          │
-│   ───────────                    ─────────────────          │
-│   "Why are users churning?"  →   "Build retention feature"  │
-│   "Which features matter?"   →   "Prioritize roadmap"       │
-│   "A/B test results"         →   "Ship winning variant"     │
-│   "Model predictions"        →   "Integrate ML endpoint"    │
-│                                                             │
-│   Research & Insights        →   Implementation & Shipping  │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+### Gyoshu's Own Agent Stack
 
-### Install Both
+Gyoshu includes everything it needs for research:
 
-```bash
-# Install My-Jogyo (research & analysis)
-curl -fsSL https://raw.githubusercontent.com/Yeachan-Heo/My-Jogyo/main/install.sh | bash
+| Agent | Role | What They Do |
+|-------|------|--------------|
+| `@gyoshu` | Professor | Plans research, orchestrates workflow |
+| `@jogyo` | TA | Executes Python code, runs experiments |
+| `@baksa` | PhD Reviewer | Challenges claims, verifies evidence |
+| `@jogyo-insight` | Evidence Gatherer | Searches docs, finds examples |
+| `@jogyo-feedback` | Learning Explorer | Reviews past sessions for patterns |
+| `@jogyo-paper-writer` | Report Writer | Transforms findings into narrative reports |
 
-# Install Oh-My-OpenCode (product development)
-curl -fsSL https://raw.githubusercontent.com/Yeachan-Heo/oh-my-opencode/main/install.sh | bash
-```
+### Optional Workflow (When Combined)
 
-### Example Workflow
+If you choose to use both tools together:
 
-1. **Analyze** with My-Jogyo:
+1. **Research** with Gyoshu:
    ```
    /gyoshu-auto analyze user behavior and identify churn predictors
    ```
@@ -334,6 +322,8 @@ curl -fsSL https://raw.githubusercontent.com/Yeachan-Heo/oh-my-opencode/main/ins
    → Ships the feature that addresses the insight
 
 **Data informs decisions. Code ships solutions.** 🚀
+
+> **Note:** You do NOT need Oh-My-OpenCode to use Gyoshu. Each tool works independently.
 
 ---
 

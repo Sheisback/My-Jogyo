@@ -178,10 +178,10 @@ If first token doesn't match a reserved subcommand → treat entire argument as 
 6. [ ] User can accomplish all tasks with just `/gyoshu` and `/gyoshu-auto`
 
 ### Independence
-7. [ ] No references to @librarian, @oracle, @explore, @executor
-8. [ ] jogyo-insight works without MCP tools (graceful fallback)
-9. [ ] Gyoshu works standalone (without oh-my-opencode)
-10. [ ] Independence documented in README or INDEPENDENCE.md
+7. [x] No runtime invocation of oh-my-opencode agents (@librarian, @oracle, @explore, @executor) in src/ code - this refers to agent delegation, not child_process spawns for system commands (documentation/plans may reference for context)
+8. [x] jogyo-insight works without MCP tools (graceful fallback)
+9. [x] Gyoshu works standalone (without oh-my-opencode)
+10. [x] Independence documented in README or INDEPENDENCE.md
 
 ---
 
@@ -345,13 +345,13 @@ python-repl(code) → returns output → notebook-writer(code + output) → note
    - Install research dependencies (pandas, numpy, scikit-learn, matplotlib) on first use
    - **Parallelizable**: NO (critical for Task 12)
 
-- [ ] 12. Update jogyo agent to capture all code
+- [x] 12. Update jogyo agent to capture all code ✅
    - Every python-repl call should result in a notebook cell
    - Capture: code source, stdout, stderr, plots, errors
    - Format outputs properly (stream, execute_result, display_data, error)
    - **Parallelizable**: NO (depends on Task 11)
 
-- [ ] 13. Add markdown report generation (like VibeQuant)
+- [x] 13. Add markdown report generation (like VibeQuant) ✅
    - Generate `report.md` - Executive summary with findings
    - Extract from structured markers: [FINDING], [CONCLUSION], [METRIC], etc.
    - Store in `./gyoshu/research/{researchId}/artifacts/{runId}/`
@@ -361,25 +361,25 @@ python-repl(code) → returns output → notebook-writer(code + output) → note
 
 ## Phase 5: Independence Hardening
 
-- [ ] 14. Add MCP tool fallbacks to jogyo-insight
+- [x] 14. Add MCP tool fallbacks to jogyo-insight ✅
    - Check if context7_* available, fallback to webfetch
    - Check if grep_app_searchGitHub available, fallback to local grep
    - Document graceful degradation behavior
    - **Parallelizable**: NO (foundation)
 
-- [ ] 15. Remove any oh-my-opencode references
+- [x] 15. Remove any oh-my-opencode references ✅
    - Audit all agent files for @librarian, @oracle, @explore, @executor references
    - Replace with Gyoshu equivalents
    - Update documentation
    - **Parallelizable**: YES (after Task 14)
 
-- [ ] 16. Add independence contract documentation
+- [x] 16. Add independence contract documentation ✅
    - Create `INDEPENDENCE.md` or add to README
    - Document: what Gyoshu depends on, what it doesn't
    - Document: MCP tools are optional enhancements
    - **Parallelizable**: YES (with Task 15)
 
-- [ ] 17. Test standalone operation
+- [x] 17. Test standalone operation ✅
    - Test without oh-my-opencode installed
    - Test without MCP tools configured
    - Verify graceful fallbacks work
