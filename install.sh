@@ -100,6 +100,15 @@ if [ "$1" = "--check" ]; then
         echo -e "${YELLOW}⚠️ No config${NC}"
     fi
     
+    # Check 7: Oh-My-OpenCode
+    echo -n "   Oh-My-OpenCode... "
+    if [ -f "$HOME/.config/opencode/command/planner.md" ]; then
+        echo -e "${GREEN}✅ Pass${NC}"
+        CHECKS_PASSED=$((CHECKS_PASSED + 1))
+    else
+        echo -e "${YELLOW}⚠️ Not installed${NC} (run ./install.sh --with-omo)"
+    fi
+    
     echo ""
     echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     if [ "$CHECKS_FAILED" -eq 0 ]; then
@@ -311,7 +320,65 @@ EOF
     fi
 fi
 
-# 8. Success!
+# 8. Install Oh-My-OpenCode (optional)
+echo ""
+echo -e "🚀 ${CYAN}Optional: Install Oh-My-OpenCode${NC}"
+echo ""
+echo -e "   Multi-agent orchestration and planning extension:"
+echo -e "   • ${GREEN}/planner${NC} — Create systematic work plans"
+echo -e "   • ${GREEN}/execute${NC} — Orchestrate agents to complete tasks"
+echo -e "   • ${GREEN}/learn${NC} — Meta-learning from execution history"
+echo ""
+
+INSTALL_OMO=""
+if [ "$1" = "--with-omo" ] || [ "$2" = "--with-omo" ] || [ "$3" = "--with-omo" ]; then
+    INSTALL_OMO="yes"
+elif [ -t 0 ]; then
+    echo -n -e "   Install Oh-My-OpenCode? ${YELLOW}(Y/n)${NC}: "
+    read -r REPLY
+    if [ -z "$REPLY" ] || [ "$REPLY" = "y" ] || [ "$REPLY" = "Y" ]; then
+        INSTALL_OMO="yes"
+    fi
+else
+    echo -e "   ${YELLOW}Tip:${NC} Run with --with-omo to install Oh-My-OpenCode automatically"
+fi
+
+if [ "$INSTALL_OMO" = "yes" ]; then
+    echo ""
+    echo -e "📦 Installing Oh-My-OpenCode..."
+    
+    OMO_REPO="https://github.com/code-yeongyu/oh-my-opencode.git"
+    OMO_TEMP=$(mktemp -d)
+    
+    if git clone --depth 1 "$OMO_REPO" "$OMO_TEMP" 2>/dev/null; then
+        if command -v rsync &> /dev/null; then
+            rsync -a \
+                --exclude='*.test.ts' \
+                --exclude='*.test.js' \
+                --exclude='node_modules' \
+                --exclude='__pycache__' \
+                --exclude='.git' \
+                --exclude='README.md' \
+                "$OMO_TEMP/src/" "$CONFIG_DIR/"
+        else
+            cp -r "$OMO_TEMP/src/"* "$CONFIG_DIR/"
+        fi
+        rm -rf "$OMO_TEMP"
+        echo -e "   ${GREEN}✓${NC} Oh-My-OpenCode installed"
+        
+        OPENCODE_JSON="$CONFIG_DIR/opencode.json"
+        if [ -f "$OPENCODE_JSON" ]; then
+            if ! grep -q '"oh-my-opencode"' "$OPENCODE_JSON" 2>/dev/null; then
+                echo -e "   ${CYAN}ℹ${NC} Add to your opencode.json plugin array: ${BLUE}\"oh-my-opencode\"${NC}"
+            fi
+        fi
+    else
+        echo -e "   ${YELLOW}⚠${NC} Failed to clone Oh-My-OpenCode"
+        echo -e "   Install manually: ${BLUE}git clone $OMO_REPO${NC}"
+    fi
+fi
+
+# 9. Success!
 echo ""
 echo -e "${GREEN}┌─────────────────────────────────────────────────────┐${NC}"
 echo -e "${GREEN}│${NC}  ✅ ${GREEN}Installation Complete!${NC}                          ${GREEN}│${NC}"
