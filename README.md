@@ -46,28 +46,30 @@ Think of it like a research lab:
 
 ## 🚀 One-Click Installation
 
-### Option 1: curl (Recommended)
+### Option 1: bunx (Recommended)
+
+```bash
+bunx gyoshu install
+```
+
+### Option 2: curl
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Yeachan-Heo/My-Jogyo/refs/heads/main/install.sh | bash
 ```
 
-### Option 2: Clone & Install
+### Option 3: Clone & Install
 
 ```bash
 git clone https://github.com/Yeachan-Heo/My-Jogyo.git
 cd My-Jogyo && ./install.sh
 ```
 
-### Option 3: Manual Installation
+### Option 4: npm global install
 
 ```bash
-# Clone the repo
-git clone https://github.com/Yeachan-Heo/My-Jogyo.git
-
-# Copy to global config
-mkdir -p ~/.config/opencode/
-cp -r My-Jogyo/src/* ~/.config/opencode/
+npm install -g gyoshu
+gyoshu install
 ```
 
 ---
