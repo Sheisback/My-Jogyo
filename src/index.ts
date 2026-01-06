@@ -1,6 +1,7 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import * as fs from "fs";
 import * as path from "path";
+import * as crypto from "crypto";
 import { homedir } from "os";
 import { fileURLToPath } from "url";
 
@@ -39,31 +40,90 @@ function isValidPath(category: string, file: string): boolean {
   return true;
 }
 
-function validateDestinationPath(destPath: string): boolean {
+function containsSymlink(targetPath: string): boolean {
+  const parts = targetPath.split(path.sep);
+  let current = parts[0] === "" ? path.sep : parts[0];
+
+  for (let i = 1; i < parts.length; i++) {
+    current = path.join(current, parts[i]);
+    try {
+      const stat = fs.lstatSync(current);
+      if (stat.isSymbolicLink()) {
+        return true;
+      }
+    } catch {
+      break;
+    }
+  }
+  return false;
+}
+
+function validateDestinationPath(destPath: string): { valid: boolean; error?: string } {
   const resolved = path.resolve(destPath);
   const configResolved = path.resolve(OPENCODE_CONFIG);
-  return resolved.startsWith(configResolved + path.sep);
+
+  if (!resolved.startsWith(configResolved + path.sep)) {
+    return { valid: false, error: "Path escapes config directory" };
+  }
+
+  if (containsSymlink(resolved)) {
+    return { valid: false, error: "Symlink detected in path" };
+  }
+
+  return { valid: true };
 }
 
-function loadInstallState(): InstallState | null {
+function loadInstallState(): { state: InstallState | null; error?: string } {
   try {
     if (fs.existsSync(INSTALL_STATE_FILE)) {
-      return JSON.parse(fs.readFileSync(INSTALL_STATE_FILE, "utf-8"));
+      const content = fs.readFileSync(INSTALL_STATE_FILE, "utf-8");
+      return { state: JSON.parse(content) };
     }
-  } catch {}
-  return null;
+    return { state: null };
+  } catch (err) {
+    return {
+      state: null,
+      error: `Failed to load install state: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 }
 
-function saveInstallState(state: InstallState): void {
+function saveInstallState(state: InstallState): { success: boolean; error?: string } {
+  const tempPath = path.join(GYOSHU_STATE_DIR, `.install.json.tmp.${crypto.randomUUID()}`);
+
   try {
     fs.mkdirSync(GYOSHU_STATE_DIR, { recursive: true });
-    fs.writeFileSync(INSTALL_STATE_FILE, JSON.stringify(state, null, 2));
-  } catch {}
+    const data = JSON.stringify(state, null, 2);
+    fs.writeFileSync(tempPath, data, { mode: 0o644 });
+    fs.renameSync(tempPath, INSTALL_STATE_FILE);
+    return { success: true };
+  } catch (err) {
+    try {
+      fs.unlinkSync(tempPath);
+    } catch {}
+    return {
+      success: false,
+      error: `Failed to save install state: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 }
 
 function isGyoshuOwned(filePath: string, state: InstallState | null): boolean {
   if (!state) return false;
   return state.files.includes(filePath);
+}
+
+function atomicCopyFile(srcPath: string, destPath: string): void {
+  const tempPath = `${destPath}.tmp.${crypto.randomUUID()}`;
+  try {
+    fs.copyFileSync(srcPath, tempPath);
+    fs.renameSync(tempPath, destPath);
+  } catch (err) {
+    try {
+      fs.unlinkSync(tempPath);
+    } catch {}
+    throw err;
+  }
 }
 
 function installFile(
@@ -79,8 +139,9 @@ function installFile(
   const srcPath = path.join(packageRoot, "src", category, file);
   const destPath = path.join(OPENCODE_CONFIG, category, file);
 
-  if (!validateDestinationPath(destPath)) {
-    return { installed: false, skipped: false, updated: false, error: "Path traversal blocked" };
+  const validation = validateDestinationPath(destPath);
+  if (!validation.valid) {
+    return { installed: false, skipped: false, updated: false, error: validation.error };
   }
 
   const relativePath = `${category}/${file}`;
@@ -90,7 +151,7 @@ function installFile(
     if (isGyoshuOwned(relativePath, state)) {
       try {
         fs.mkdirSync(path.dirname(destPath), { recursive: true });
-        fs.copyFileSync(srcPath, destPath);
+        atomicCopyFile(srcPath, destPath);
         return { installed: false, skipped: false, updated: true };
       } catch (err) {
         return {
@@ -134,8 +195,9 @@ function installSkill(
   const srcDir = path.join(packageRoot, "src", "skill", skillName);
   const destDir = path.join(OPENCODE_CONFIG, "skill", skillName);
 
-  if (!validateDestinationPath(destDir)) {
-    return { installed: false, skipped: false, updated: false, error: "Path traversal blocked" };
+  const validation = validateDestinationPath(destDir);
+  if (!validation.valid) {
+    return { installed: false, skipped: false, updated: false, error: validation.error };
   }
 
   const relativePath = `skill/${skillName}`;
@@ -143,11 +205,23 @@ function installSkill(
 
   if (dirExists) {
     if (isGyoshuOwned(relativePath, state)) {
+      const tempDir = `${destDir}.tmp.${crypto.randomUUID()}`;
       try {
-        fs.rmSync(destDir, { recursive: true, force: true });
-        fs.cpSync(srcDir, destDir, { recursive: true });
+        fs.cpSync(srcDir, tempDir, { recursive: true });
+        const backupDir = `${destDir}.backup.${crypto.randomUUID()}`;
+        fs.renameSync(destDir, backupDir);
+        try {
+          fs.renameSync(tempDir, destDir);
+          fs.rmSync(backupDir, { recursive: true, force: true });
+        } catch (renameErr) {
+          fs.renameSync(backupDir, destDir);
+          throw renameErr;
+        }
         return { installed: false, skipped: false, updated: true };
       } catch (err) {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch {}
         return {
           installed: false,
           skipped: false,
@@ -184,7 +258,7 @@ function autoInstall(): {
   installedFiles: string[];
 } {
   const packageRoot = getPackageRoot();
-  const existingState = loadInstallState();
+  const { state: existingState, error: stateError } = loadInstallState();
   const result = {
     installed: 0,
     skipped: 0,
@@ -192,6 +266,10 @@ function autoInstall(): {
     errors: [] as string[],
     installedFiles: [] as string[],
   };
+
+  if (stateError) {
+    result.errors.push(stateError);
+  }
 
   fs.mkdirSync(OPENCODE_CONFIG, { recursive: true });
 
@@ -231,11 +309,14 @@ function autoInstall(): {
   if (result.installed > 0 || result.updated > 0) {
     const allFiles = existingState?.files || [];
     const newFiles = new Set([...allFiles, ...result.installedFiles]);
-    saveInstallState({
+    const { error: saveError } = saveInstallState({
       version: manifest.version,
       installedAt: new Date().toISOString(),
       files: Array.from(newFiles),
     });
+    if (saveError) {
+      result.errors.push(saveError);
+    }
   }
 
   return result;
@@ -251,13 +332,11 @@ export const GyoshuPlugin: Plugin = async (ctx) => {
   }
 
   if (installResult.updated > 0) {
-    console.log(
-      `🎓 Gyoshu: Updated ${installResult.updated} files`
-    );
+    console.log(`🎓 Gyoshu: Updated ${installResult.updated} files`);
   }
 
   if (installResult.errors.length > 0) {
-    console.warn(`⚠️  Gyoshu: Some files failed to install:`);
+    console.warn(`⚠️  Gyoshu: Some issues occurred:`);
     for (const error of installResult.errors) {
       console.warn(`   - ${error}`);
     }
