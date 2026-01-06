@@ -243,7 +243,7 @@ function acquireLock(configRealPath: string, errors: string[]): { fd: number; lo
       }
 
       const lockId = crypto.randomUUID();
-      const fd = fs.openSync(INSTALL_LOCK_FILE, "wx", 0o644);
+      const fd = fs.openSync(INSTALL_LOCK_FILE, "wx", 0o600);
       const content = `${process.pid}\n${Date.now()}\n${lockId}`;
       fs.writeSync(fd, content);
       fs.fsyncSync(fd);
@@ -414,7 +414,7 @@ function saveInstallState(
     }
 
     const data = JSON.stringify(state, null, 2);
-    const fd = fs.openSync(tempPath, "wx", 0o644);
+    const fd = fs.openSync(tempPath, "wx", 0o600);
     try {
       fs.writeSync(fd, data);
       fs.fsyncSync(fd);
@@ -462,7 +462,7 @@ function atomicCopyFile(srcPath: string, destPath: string, configRealPath: strin
   }
 
   const tempPath = `${destPath}.tmp.${crypto.randomUUID()}`;
-  const fd = fs.openSync(tempPath, "wx", 0o644);
+  const fd = fs.openSync(tempPath, "wx", 0o600);
   try {
     const content = fs.readFileSync(srcPath);
     fs.writeSync(fd, content);
@@ -499,7 +499,7 @@ function atomicCreateFile(srcPath: string, destPath: string, configRealPath: str
   }
 
   const tempPath = `${destPath}.tmp.${crypto.randomUUID()}`;
-  const fd = fs.openSync(tempPath, "wx", 0o644);
+  const fd = fs.openSync(tempPath, "wx", 0o600);
   try {
     const content = fs.readFileSync(srcPath);
     fs.writeSync(fd, content);
