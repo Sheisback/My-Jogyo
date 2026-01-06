@@ -130,12 +130,20 @@ function validateNoSymlinksInPath(targetPath: string): { valid: boolean; error?:
 
 function ensureConfigDir(errors: string[]): string | null {
   try {
-    fs.mkdirSync(OPENCODE_CONFIG, { recursive: true });
-    const validation = validateNoSymlinksInPath(OPENCODE_CONFIG);
-    if (!validation.valid) {
-      errors.push(validation.error || "Symlink in config path");
+    const preValidation = validateNoSymlinksInPath(OPENCODE_CONFIG);
+    if (!preValidation.valid) {
+      errors.push(preValidation.error || "Symlink in config path");
       return null;
     }
+
+    fs.mkdirSync(OPENCODE_CONFIG, { recursive: true });
+
+    const postValidation = validateNoSymlinksInPath(OPENCODE_CONFIG);
+    if (!postValidation.valid) {
+      errors.push(postValidation.error || "Symlink appeared in config path after mkdir");
+      return null;
+    }
+
     return fs.realpathSync(OPENCODE_CONFIG);
   } catch (err) {
     errors.push(`Failed to create config dir: ${err instanceof Error ? err.message : String(err)}`);
@@ -145,7 +153,14 @@ function ensureConfigDir(errors: string[]): string | null {
 
 function ensureStateDir(configRealPath: string, errors: string[]): boolean {
   try {
+    const preValidation = validateNoSymlinksInPath(GYOSHU_STATE_DIR);
+    if (!preValidation.valid) {
+      errors.push(preValidation.error || "Symlink in state directory path");
+      return false;
+    }
+
     fs.mkdirSync(GYOSHU_STATE_DIR, { recursive: true });
+
     if (isSymlink(GYOSHU_STATE_DIR)) {
       errors.push("State directory is a symlink - refusing to use");
       return false;
@@ -236,7 +251,11 @@ function acquireLock(configRealPath: string, errors: string[]): { fd: number; lo
       const verifyInfo = parseLockFile();
       if (!verifyInfo || verifyInfo.lockId !== lockId) {
         try { fs.closeSync(fd); } catch {}
-        try { fs.unlinkSync(INSTALL_LOCK_FILE); } catch {}
+        try {
+          if (!isSymlink(INSTALL_LOCK_FILE)) {
+            fs.unlinkSync(INSTALL_LOCK_FILE);
+          }
+        } catch {}
         errors.push("Lock file verification failed - lock was overwritten");
         return null;
       }
