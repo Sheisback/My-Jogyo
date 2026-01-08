@@ -22,7 +22,7 @@ permission:
   write:
     "./notebooks/**": allow
     "./reports/**": allow
-    "./gyoshu/retrospectives/**": allow  # Only retrospectives, not research
+    "./gyoshu/retrospectives/**": allow
     "*": ask
 ---
 

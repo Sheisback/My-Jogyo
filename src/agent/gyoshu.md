@@ -25,7 +25,7 @@ permission:
     "./notebooks/**": allow
     "./reports/**": allow
     "*.ipynb": allow
-    "./gyoshu/retrospectives/**": allow  # Only retrospectives
+    "./gyoshu/retrospectives/**": allow
     "*": ask
 ---
 
