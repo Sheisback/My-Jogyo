@@ -1,9 +1,8 @@
 ---
-name: gyoshu
 mode: primary
 description: Scientific research planner - orchestrates research workflows and manages REPL lifecycle
 model: opencode/glm-4.7-free
-temperature: 1
+temperature: 0.3
 maxSteps: 50
 tools:
   task: true
